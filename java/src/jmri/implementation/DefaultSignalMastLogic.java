@@ -51,6 +51,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
     boolean useAutoGenTurnouts = true;
 
     LayoutBlock facingBlock = null;
+    LayoutBlock remoteProtectingBlock = null;
 
     boolean disposing = false;
 
@@ -1042,7 +1043,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
      * Class to store SML properties for a destination mast paired with this
      * source mast.
      */
-    private class DestinationMast {
+    public class DestinationMast {
 
         LayoutBlock destinationBlock = null;
         LayoutBlock protectingBlock = null; //this is the block that the source signal is protecting
@@ -1080,7 +1081,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
 
         NamedBeanHandle<Section> associatedSection = null;
 
-        DestinationMast(SignalMast destination) {
+        public DestinationMast(SignalMast destination) {
             this.destination = destination;
             if (destination.getAspect() == null) {
                 try {
@@ -1340,7 +1341,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
          * @param overwrite    When true, replace an existing autoMasts list in
          *                     the SML
          */
-        void setAutoMasts(Hashtable<SignalMast, String> newAutoMasts, boolean overwrite) {
+        public void setAutoMasts(Hashtable<SignalMast, String> newAutoMasts, boolean overwrite) {
             if (log.isDebugEnabled()) {
                 log.debug("{} setAutoMast Called", destination.getDisplayName());
             }
@@ -2075,7 +2076,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
             List<LayoutBlock> protectingBlocks = new ArrayList<>();
             // We don't care which Layout Editor panel the signal mast is on, just so long as
             // the routing is done via layout blocks.
-            LayoutBlock remoteProtectingBlock = null;
+            remoteProtectingBlock = null;  //now a class variable
             for (int i = 0; i < layout.size(); i++) {
                 if (log.isDebugEnabled()) {
                     log.debug("{} Layout name {}", destination.getDisplayName(), editor.getLayoutName());
@@ -2228,7 +2229,11 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
                     }
                     //We use the best connectivity for the current block;
                     connection = new ConnectivityUtil(lblks.get(i).getMaxConnectedPanel());
-                    turnoutList = connection.getTurnoutList(lblks.get(i).getBlock(), lblks.get(preBlk).getBlock(), lblks.get(nxtBlk).getBlock());
+                    if (i == lblks.size() - 1 && remoteProtectingBlock != null) {
+                        turnoutList = connection.getTurnoutList(lblks.get(i).getBlock(), lblks.get(preBlk).getBlock(), remoteProtectingBlock.getBlock());
+                    }else{
+                        turnoutList = connection.getTurnoutList(lblks.get(i).getBlock(), lblks.get(preBlk).getBlock(), lblks.get(nxtBlk).getBlock());
+                    }
                     for (int x = 0; x < turnoutList.size(); x++) {
                         LayoutTurnout lt = turnoutList.get(x).getObject();
                         if (lt instanceof LayoutSlip) {
@@ -2297,7 +2302,7 @@ public class DefaultSignalMastLogic extends AbstractNamedBean implements jmri.Si
             }
             return block;
         }
-
+        
         /**
          * Generate auto signalmast for a given SML. Looks through all the other
          * logics to see if there are any blocks that are in common and thus
